@@ -7,7 +7,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Add an opaque cover over the safe area zone (Dynamic Island / notch)
+        // to prevent scrolling content from showing around the cutout
+        DispatchQueue.main.async {
+            if let window = self.window {
+                let cover = UIView()
+                cover.backgroundColor = UIColor(red: 12.0/255.0, green: 11.0/255.0, blue: 15.0/255.0, alpha: 1.0)
+                cover.translatesAutoresizingMaskIntoConstraints = false
+                window.addSubview(cover)
+                NSLayoutConstraint.activate([
+                    cover.topAnchor.constraint(equalTo: window.topAnchor),
+                    cover.leadingAnchor.constraint(equalTo: window.leadingAnchor),
+                    cover.trailingAnchor.constraint(equalTo: window.trailingAnchor),
+                    cover.bottomAnchor.constraint(equalTo: window.safeAreaLayoutGuide.topAnchor)
+                ])
+            }
+        }
         return true
     }
 
