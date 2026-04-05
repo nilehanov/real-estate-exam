@@ -1,0 +1,13 @@
+{
+  "appId": "com.nilehanov.realestateexam",
+  "appName": "Real Estate Exam",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile",
+    "backgroundColor": "#0c0b0f"
+  }
+}
