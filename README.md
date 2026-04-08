@@ -125,6 +125,46 @@ Single-file vanilla HTML/CSS/JS application. All 1,300 questions are embedded as
 
 The iOS app uses [Capacitor](https://capacitorjs.com/) to wrap the web app in a native WKWebView shell with Dynamic Island/notch safe area handling.
 
+## App Store Connect API Setup
+
+The project uses the App Store Connect API for automated builds, uploads, and review submissions.
+
+### 1. Generate an API Key
+
+1. Go to [App Store Connect](https://appstoreconnect.apple.com) > Users and Access > Integrations > App Store Connect API
+2. Click **Generate API Key** (requires Admin role)
+3. Download the `.p8` private key file (you can only download it once)
+4. Note the **Key ID** and **Issuer ID** shown on the page
+
+### 2. Configure Environment
+
+Copy the example env file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```
+ASC_KEY_ID=YOUR_KEY_ID              # e.g. 5H383G83CF
+ASC_ISSUER_ID=YOUR_ISSUER_ID       # e.g. d561a068-9c42-4a88-92df-b61c9cc541a7
+ASC_PRIVATE_KEY_PATH=/path/to/AuthKey_XXXXXXXX.p8
+ASC_APP_ID=YOUR_APP_ID             # From App Store Connect URL
+ASC_BUNDLE_ID=com.yourcompany.yourapp
+ASC_TEAM_ID=YOUR_TEAM_ID           # Apple Developer Team ID
+```
+
+Store the `.p8` key file somewhere safe outside the repo (e.g. `~/private_keys/`). The `.env` file is gitignored and never committed.
+
+### 3. Usage
+
+The API key is used by deployment scripts (fastlane, Python scripts) for:
+- Uploading builds to App Store Connect
+- Setting export compliance on new builds
+- Managing app review submissions
+- Updating app metadata
+
 ## App Store Submission
 
 1. Enroll in the [Apple Developer Program](https://developer.apple.com) ($99/year)
