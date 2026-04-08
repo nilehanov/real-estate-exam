@@ -157,13 +157,114 @@ ASC_TEAM_ID=YOUR_TEAM_ID           # Apple Developer Team ID
 
 Store the `.p8` key file somewhere safe outside the repo (e.g. `~/private_keys/`). The `.env` file is gitignored and never committed.
 
-### 3. Usage
+### 3. Build, Upload & Submit
 
-The API key is used by deployment scripts (fastlane, Python scripts) for:
-- Uploading builds to App Store Connect
-- Setting export compliance on new builds
-- Managing app review submissions
-- Updating app metadata
+```bash
+# Load env vars
+source .env
+
+# Build web assets and sync to iOS
+npm run build && npx cap sync ios
+
+# Archive
+xcodebuild -project ios/App/App.xcodeproj -scheme App \
+  -configuration Release -archivePath build/App.xcarchive archive \
+  -allowProvisioningUpdates CODE_SIGN_STYLE=Automatic \
+  DEVELOPMENT_TEAM=$ASC_TEAM_ID
+
+# Export and upload to App Store Connect
+xcodebuild -exportArchive -archivePath build/App.xcarchive \
+  -exportOptionsPlist build/ExportOptions.plist \
+  -exportPath build/export -allowProvisioningUpdates
+
+# Set export compliance and submit for review using the API
+python3 scripts/submit.py
+```
+
+Example `scripts/submit.py` (uses env vars):
+
+```python
+import os, json, time, jwt, requests
+
+KEY_ID    = os.environ["ASC_KEY_ID"]
+ISSUER_ID = os.environ["ASC_ISSUER_ID"]
+APP_ID    = os.environ["ASC_APP_ID"]
+
+with open(os.environ["ASC_PRIVATE_KEY_PATH"]) as f:
+    PRIVATE_KEY = f.read()
+
+# Generate JWT token
+now = int(time.time())
+token = jwt.encode(
+    {"iss": ISSUER_ID, "iat": now, "exp": now + 1200, "aud": "appstoreconnect-v1"},
+    PRIVATE_KEY,
+    algorithm="ES256",
+    headers={"kid": KEY_ID}
+)
+headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+# Get latest build
+builds = requests.get(
+    f"https://api.appstoreconnect.apple.com/v1/builds?filter[app]={APP_ID}&sort=-uploadedDate&limit=1",
+    headers=headers
+).json()
+build = builds["data"][0]
+build_id = build["id"]
+print(f"Latest build: {build['attributes']['version']} ({build_id})")
+
+# Set export compliance
+requests.patch(
+    f"https://api.appstoreconnect.apple.com/v1/builds/{build_id}",
+    headers=headers,
+    json={"data": {"type": "builds", "id": build_id,
+          "attributes": {"usesNonExemptEncryption": False}}}
+)
+print("Export compliance set")
+
+# Get app store version
+versions = requests.get(
+    f"https://api.appstoreconnect.apple.com/v1/apps/{APP_ID}/appStoreVersions",
+    headers=headers
+).json()
+version_id = versions["data"][0]["id"]
+
+# Assign build to version
+requests.patch(
+    f"https://api.appstoreconnect.apple.com/v1/appStoreVersions/{version_id}/relationships/build",
+    headers=headers,
+    json={"data": {"type": "builds", "id": build_id}}
+)
+print("Build assigned to version")
+
+# Submit for review
+sub = requests.post(
+    "https://api.appstoreconnect.apple.com/v1/reviewSubmissions",
+    headers=headers,
+    json={"data": {"type": "reviewSubmissions",
+          "attributes": {"platform": "IOS"},
+          "relationships": {"app": {"data": {"type": "apps", "id": APP_ID}}}}}
+).json()
+sub_id = sub["data"]["id"]
+
+requests.post(
+    "https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems",
+    headers=headers,
+    json={"data": {"type": "reviewSubmissionItems",
+          "relationships": {
+              "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": sub_id}},
+              "appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}}}}}
+)
+
+requests.patch(
+    f"https://api.appstoreconnect.apple.com/v1/reviewSubmissions/{sub_id}",
+    headers=headers,
+    json={"data": {"type": "reviewSubmissions", "id": sub_id,
+          "attributes": {"submitted": True}}}
+)
+print("Submitted for review!")
+```
+
+> **Requires:** `pip install PyJWT requests cryptography`
 
 ## App Store Submission
 
