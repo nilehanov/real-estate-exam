@@ -1,5 +1,6 @@
 node_modules/
 .DS_Store
+.env
 
 # iOS build artifacts
 ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/

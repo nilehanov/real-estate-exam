@@ -125,6 +125,182 @@ Single-file vanilla HTML/CSS/JS application. All 1,300 questions are embedded as
 
 The iOS app uses [Capacitor](https://capacitorjs.com/) to wrap the web app in a native WKWebView shell with Dynamic Island/notch safe area handling.
 
+## App Store Connect API Setup
+
+The project uses the App Store Connect API for automated builds, uploads, and review submissions.
+
+### 1. Generate an API Key
+
+1. Go to [App Store Connect](https://appstoreconnect.apple.com) > Users and Access > Integrations > App Store Connect API
+2. Click **Generate API Key** (requires Admin role)
+3. Download the `.p8` private key file (you can only download it once)
+4. Note the **Key ID** and **Issuer ID** shown on the page
+
+### 2. Configure Environment
+
+Copy the example env file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```
+ASC_KEY_ID=YOUR_KEY_ID              # e.g. AB12CD34EF
+ASC_ISSUER_ID=YOUR_ISSUER_ID       # e.g. a1b2c3d4-e5f6-7890-abcd-ef1234567890
+ASC_PRIVATE_KEY_PATH=/path/to/AuthKey_XXXXXXXX.p8
+ASC_APP_ID=YOUR_APP_ID             # From App Store Connect URL
+ASC_BUNDLE_ID=com.yourcompany.yourapp
+ASC_TEAM_ID=YOUR_TEAM_ID           # Apple Developer Team ID
+```
+
+Store the `.p8` key file somewhere safe outside the repo (e.g. `~/private_keys/`). The `.env` file is gitignored and never committed.
+
+### 3. Fastlane API Key
+
+Fastlane uses a separate JSON file with the private key embedded. Create `~/private_keys/api_key.json`:
+
+```json
+{
+  "key_id": "AB12CD34EF",
+  "issuer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "key": "-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqG...your-key-content...kE9Yz0=\n-----END PRIVATE KEY-----",
+  "in_house": false
+}
+```
+
+| Field | Where to find it | Format |
+|-------|-----------------|--------|
+| `key_id` | App Store Connect > Users and Access > Integrations > App Store Connect API > Key ID column | 10-char alphanumeric (e.g. `AB12CD34EF`) |
+| `issuer_id` | Same page, shown at the top above the keys table | UUID (e.g. `a1b2c3d4-e5f6-7890-abcd-ef1234567890`) |
+| `key` | Contents of the `.p8` file you downloaded when creating the key (newlines replaced with `\n`) | PEM-encoded EC private key |
+| `in_house` | Set to `false` for standard Apple Developer accounts, `true` only for Apple Enterprise accounts | `false` for most developers |
+
+To get the `key` value, copy the contents of your `.p8` file and replace newlines with `\n`.
+
+Usage:
+
+```bash
+# Upload metadata and screenshots
+fastlane deliver --api_key_path ~/private_keys/api_key.json
+
+# Upload screenshots only
+fastlane deliver --api_key_path ~/private_keys/api_key.json --skip_binary_upload --skip_metadata
+
+# Upload metadata only
+fastlane deliver --api_key_path ~/private_keys/api_key.json --skip_binary_upload --skip_screenshots
+```
+
+### 4. Build, Upload & Submit
+
+```bash
+# Load env vars
+source .env
+
+# Build web assets and sync to iOS
+npm run build && npx cap sync ios
+
+# Archive
+xcodebuild -project ios/App/App.xcodeproj -scheme App \
+  -configuration Release -archivePath build/App.xcarchive archive \
+  -allowProvisioningUpdates CODE_SIGN_STYLE=Automatic \
+  DEVELOPMENT_TEAM=$ASC_TEAM_ID
+
+# Export and upload to App Store Connect
+xcodebuild -exportArchive -archivePath build/App.xcarchive \
+  -exportOptionsPlist build/ExportOptions.plist \
+  -exportPath build/export -allowProvisioningUpdates
+
+# Set export compliance and submit for review using the API
+python3 scripts/submit.py
+```
+
+Example `scripts/submit.py` (uses env vars):
+
+```python
+import os, json, time, jwt, requests
+
+KEY_ID    = os.environ["ASC_KEY_ID"]
+ISSUER_ID = os.environ["ASC_ISSUER_ID"]
+APP_ID    = os.environ["ASC_APP_ID"]
+
+with open(os.environ["ASC_PRIVATE_KEY_PATH"]) as f:
+    PRIVATE_KEY = f.read()
+
+# Generate JWT token
+now = int(time.time())
+token = jwt.encode(
+    {"iss": ISSUER_ID, "iat": now, "exp": now + 1200, "aud": "appstoreconnect-v1"},
+    PRIVATE_KEY,
+    algorithm="ES256",
+    headers={"kid": KEY_ID}
+)
+headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+# Get latest build
+builds = requests.get(
+    f"https://api.appstoreconnect.apple.com/v1/builds?filter[app]={APP_ID}&sort=-uploadedDate&limit=1",
+    headers=headers
+).json()
+build = builds["data"][0]
+build_id = build["id"]
+print(f"Latest build: {build['attributes']['version']} ({build_id})")
+
+# Set export compliance
+requests.patch(
+    f"https://api.appstoreconnect.apple.com/v1/builds/{build_id}",
+    headers=headers,
+    json={"data": {"type": "builds", "id": build_id,
+          "attributes": {"usesNonExemptEncryption": False}}}
+)
+print("Export compliance set")
+
+# Get app store version
+versions = requests.get(
+    f"https://api.appstoreconnect.apple.com/v1/apps/{APP_ID}/appStoreVersions",
+    headers=headers
+).json()
+version_id = versions["data"][0]["id"]
+
+# Assign build to version
+requests.patch(
+    f"https://api.appstoreconnect.apple.com/v1/appStoreVersions/{version_id}/relationships/build",
+    headers=headers,
+    json={"data": {"type": "builds", "id": build_id}}
+)
+print("Build assigned to version")
+
+# Submit for review
+sub = requests.post(
+    "https://api.appstoreconnect.apple.com/v1/reviewSubmissions",
+    headers=headers,
+    json={"data": {"type": "reviewSubmissions",
+          "attributes": {"platform": "IOS"},
+          "relationships": {"app": {"data": {"type": "apps", "id": APP_ID}}}}}
+).json()
+sub_id = sub["data"]["id"]
+
+requests.post(
+    "https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems",
+    headers=headers,
+    json={"data": {"type": "reviewSubmissionItems",
+          "relationships": {
+              "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": sub_id}},
+              "appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}}}}}
+)
+
+requests.patch(
+    f"https://api.appstoreconnect.apple.com/v1/reviewSubmissions/{sub_id}",
+    headers=headers,
+    json={"data": {"type": "reviewSubmissions", "id": sub_id,
+          "attributes": {"submitted": True}}}
+)
+print("Submitted for review!")
+```
+
+> **Requires:** `pip install PyJWT requests cryptography`
+
 ## App Store Submission
 
 1. Enroll in the [Apple Developer Program](https://developer.apple.com) ($99/year)

@@ -469,6 +469,31 @@ body{
   .main{padding:.7rem;padding-bottom:5rem}
   .question-card{padding:1rem}
 }
+/* Paywall */
+.paywall-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.paywall-overlay.visible{opacity:1;pointer-events:auto}
+.paywall-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;max-width:400px;width:90%;text-align:center;position:relative;transform:translateY(20px);transition:transform .3s}
+.paywall-overlay.visible .paywall-card{transform:translateY(0)}
+.paywall-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text3);font-size:1.5rem;cursor:pointer;padding:4px 8px}
+.paywall-close:hover{color:var(--text)}
+.paywall-card h2{font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:1.8rem;margin:0 0 .5rem}
+.paywall-subtitle{color:var(--text2);font-size:.85rem;margin-bottom:1.5rem}
+.paywall-features{text-align:left;margin:0 auto 1.5rem;max-width:300px}
+.paywall-features div{padding:.5rem 0;color:var(--text);font-size:.85rem;border-bottom:1px solid var(--border)}
+.paywall-features div::before{content:"\2713 ";color:var(--gold);font-weight:700;margin-right:.5rem}
+.paywall-price{margin-bottom:1.5rem}
+.paywall-price .price{display:block;font-size:1.4rem;color:var(--text);font-weight:600}
+.paywall-price .trial{display:block;font-size:.8rem;color:var(--gold);margin-top:.3rem}
+.paywall-cta{width:100%;padding:.9rem;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#0c0b0f;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:transform .15s,box-shadow .15s}
+.paywall-cta:hover{transform:scale(1.02);box-shadow:0 4px 20px rgba(201,169,110,.3)}
+.paywall-restore{background:none;border:none;color:var(--text3);font-size:.75rem;cursor:pointer;padding:.8rem;text-decoration:underline}
+.paywall-restore:hover{color:var(--text2)}
+.paywall-legal{font-size:.55rem;color:var(--text3);line-height:1.5;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}
+.paywall-legal a{color:var(--text3);text-decoration:underline}
+.explanation-locked{text-align:center;padding:1rem;color:var(--text3);font-size:.85rem}
+.explanation-locked .unlock-btn{display:inline-block;margin-top:.6rem;padding:.4rem 1.2rem;background:var(--gold-bg);border:1px solid var(--gold-dark);border-radius:6px;color:var(--gold);font-size:.75rem;cursor:pointer;transition:background .2s}
+.explanation-locked .unlock-btn:hover{background:var(--gold-glow)}
+#csLockIcon:not(:empty){margin-right:4px;font-size:.7rem}
 </style>
 </head>
 <body>
@@ -477,7 +502,7 @@ body{
   <div class="subtitle">California DRE Salesperson &middot; 1,300 Practice Questions</div>
   <div class="mode-toggle">
     <button class="mode-btn active" id="modeMultiple">Multiple Choice</button>
-    <button class="mode-btn" id="modeCaseStudy">Case Studies</button>
+    <button class="mode-btn" id="modeCaseStudy"><span id="csLockIcon"></span>Case Studies</button>
   </div>
   <div class="stats-bar">
     <div class="stat"><strong id="s-answered">0</strong> / <span id="s-total">1000</span> answered</div>
@@ -513,6 +538,116 @@ body{
   var mode = "mc";
   var mcState = { filter: null, search: "", current: 0, answers: {} };
   var csState = { filter: null, search: "", current: 0, answers: {} };
+
+  // --- Subscription ---
+  var isPremium = false;
+  var isNative = typeof Capacitor !== "undefined" && Capacitor.isNativePlatform();
+  var StoreKit = isNative ? Capacitor.registerPlugin("StoreKit") : null;
+
+  function checkSubscription() {
+    if (!isNative) { isPremium = true; updateLockIcon(); return; }
+    try {
+      var cached = localStorage.getItem("subscription_status");
+      if (cached) { isPremium = JSON.parse(cached).isActive; }
+    } catch(e) {}
+    updateLockIcon();
+    StoreKit.getSubscriptionStatus().then(function(s) {
+      isPremium = s.isActive;
+      localStorage.setItem("subscription_status", JSON.stringify(s));
+      updateLockIcon(); renderQuestion(); renderCats();
+    }).catch(function() {});
+  }
+
+  function updateLockIcon() {
+    var el = document.getElementById("csLockIcon");
+    if (el) el.textContent = (!isPremium && isNative) ? "\uD83D\uDD12" : "";
+  }
+
+  function showPaywall() {
+    var el = document.getElementById("paywall");
+    if (!el) {
+      var d = document.createElement("div");
+      d.id = "paywall";
+      d.className = "paywall-overlay";
+      d.innerHTML = '<div class="paywall-card">'
+        + '<button class="paywall-close" onclick="document.getElementById(\'paywall\').classList.remove(\'visible\')">&times;</button>'
+        + '<h2>Unlock Premium</h2>'
+        + '<p class="paywall-subtitle">Case Studies & Detailed Explanations</p>'
+        + '<div class="paywall-features">'
+        + '<div>100 Real-World Case Study Scenarios</div>'
+        + '<div>300 Case Study Questions</div>'
+        + '<div>Detailed Explanations for All 1,000 MC Questions</div>'
+        + '</div>'
+        + '<div class="paywall-price"><span class="price">$0.99/month</span><span class="trial">Start with 1 week free</span></div>'
+        + '<button class="paywall-cta" id="pwBuy">Try Free for 1 Week</button>'
+        + '<button class="paywall-restore" id="pwRestore">Restore Purchases</button>'
+        + '<div class="paywall-legal">'
+        + '<p>After the free trial, subscription auto-renews at $0.99/month. Cancel anytime in Settings &gt; Apple ID &gt; Subscriptions.</p>'
+        + '<p>Payment charged to your Apple ID at confirmation. Subscription auto-renews unless canceled at least 24 hours before the end of the current period.</p>'
+        + '<a href="https://nilehanov.github.io/real-estate-exam/privacy-policy.html">Privacy Policy</a>'
+        + ' &middot; <a href="https://nilehanov.github.io/real-estate-exam/terms.html">Terms of Use</a>'
+        + '</div></div>';
+      document.body.appendChild(d);
+      d.addEventListener("click", function(e) { if (e.target === d) d.classList.remove("visible"); });
+      document.getElementById("pwBuy").addEventListener("click", handlePurchase);
+      document.getElementById("pwRestore").addEventListener("click", handleRestore);
+      el = d;
+    }
+    el.classList.add("visible");
+  }
+
+  function hidePaywall() {
+    var el = document.getElementById("paywall");
+    if (el) el.classList.remove("visible");
+  }
+
+  function handlePurchase() {
+    var btn = document.getElementById("pwBuy");
+    btn.textContent = "Processing..."; btn.disabled = true;
+    StoreKit.purchase({ productId: "com.nilehanov.realestateexam.premium.monthly" })
+      .then(function(r) {
+        if (r.status === "success") {
+          isPremium = true;
+          localStorage.setItem("subscription_status", JSON.stringify({ isActive: true }));
+          hidePaywall(); updateLockIcon(); renderQuestion(); renderCats();
+        } else if (r.status === "cancelled") {
+          btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
+        } else {
+          btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
+          if (r.status === "pending") alert("Purchase is pending approval.");
+        }
+      }).catch(function(e) {
+        btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
+        alert("Purchase failed. Please try again.");
+      });
+  }
+
+  function handleRestore() {
+    var btn = document.getElementById("pwRestore");
+    btn.textContent = "Restoring...";
+    StoreKit.restorePurchases().then(function(s) {
+      isPremium = s.isActive;
+      localStorage.setItem("subscription_status", JSON.stringify(s));
+      if (s.isActive) {
+        hidePaywall(); updateLockIcon(); renderQuestion(); renderCats();
+      } else {
+        btn.textContent = "Restore Purchases";
+        alert("No active subscription found.");
+      }
+    }).catch(function() {
+      btn.textContent = "Restore Purchases";
+      alert("Restore failed. Please try again.");
+    });
+  }
+
+  if (isNative && StoreKit) {
+    StoreKit.addListener("subscriptionStatusChanged", function(s) {
+      isPremium = s.isActive;
+      localStorage.setItem("subscription_status", JSON.stringify(s));
+      updateLockIcon(); renderQuestion(); renderCats();
+    });
+  }
+  // --- End Subscription ---
   function getState(){ return mode === "mc" ? mcState : csState; }
   function getData(){ return mode === "mc" ? Q : CS; }
 
@@ -673,7 +808,12 @@ body{
     if (!answered) h += '<button class="hint-btn" data-hint="' + q.id + '">&#128161; Show Hint</button>';
     h += '<div id="hint-' + q.id + '" style="display:none"></div>';
     if (answered) {
-      h += '<div class="explanation-box"><strong>' + (ans.correct ? '&#10003; Correct!' : '&#10007; Incorrect') + '</strong><br>' + esc(q.explanation) + '</div>';
+      if (isPremium || !isNative) {
+        h += '<div class="explanation-box"><strong>' + (ans.correct ? '&#10003; Correct!' : '&#10007; Incorrect') + '</strong><br>' + esc(q.explanation) + '</div>';
+      } else {
+        h += '<div class="explanation-box"><strong>' + (ans.correct ? '&#10003; Correct!' : '&#10007; Incorrect') + '</strong>'
+          + '<div class="explanation-locked">Unlock detailed explanations with Premium<br><button class="unlock-btn" onclick="showPaywall()">Unlock Premium</button></div></div>';
+      }
     }
     h += '</div>';
     h += navHTML(filtered);
@@ -752,6 +892,7 @@ body{
 
   function switchMode(newMode) {
     if (mode === newMode) return;
+    if (newMode === "cs" && !isPremium && isNative) { showPaywall(); return; }
     mode = newMode;
     document.getElementById("modeMultiple").classList.toggle("active", mode === "mc");
     document.getElementById("modeCaseStudy").classList.toggle("active", mode === "cs");
@@ -832,6 +973,7 @@ body{
   });
 
   // Init
+  checkSubscription();
   updateStats(); renderCats(); renderGrid(); renderQuestion();
 })();
 </script>
