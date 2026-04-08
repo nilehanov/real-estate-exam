@@ -147,8 +147,8 @@ cp .env.example .env
 Edit `.env`:
 
 ```
-ASC_KEY_ID=YOUR_KEY_ID
-ASC_ISSUER_ID=YOUR_ISSUER_ID
+ASC_KEY_ID=YOUR_KEY_ID              # e.g. AB12CD34EF
+ASC_ISSUER_ID=YOUR_ISSUER_ID       # e.g. a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ASC_PRIVATE_KEY_PATH=/path/to/AuthKey_XXXXXXXX.p8
 ASC_APP_ID=YOUR_APP_ID             # From App Store Connect URL
 ASC_BUNDLE_ID=com.yourcompany.yourapp
