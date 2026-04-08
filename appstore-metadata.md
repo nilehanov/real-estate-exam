@@ -24,6 +24,8 @@ Property Ownership, Land Use Controls, Valuation & Market Analysis, Financing, T
 
 Prepare on your own schedule. Study anywhere, anytime — all content is available offline.
 
+Premium subscription ($0.99/month with 1-week free trial) unlocks Case Studies and detailed explanations for all multiple choice questions.
+
 ## Promotional Text (170 chars max)
 1,300 practice questions for the California Real Estate Salesperson Exam. Study offline with instant feedback and detailed explanations.
 
@@ -38,7 +40,7 @@ Secondary: Business
 4+ (No objectionable content)
 
 ## Price
-Free
+Free with In-App Purchases ($0.99/month Premium subscription)
 
 ## Privacy Policy URL
 https://nilehanov.github.io/real-estate-exam/privacy-policy.html
