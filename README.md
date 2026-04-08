@@ -157,7 +157,35 @@ ASC_TEAM_ID=YOUR_TEAM_ID           # Apple Developer Team ID
 
 Store the `.p8` key file somewhere safe outside the repo (e.g. `~/private_keys/`). The `.env` file is gitignored and never committed.
 
-### 3. Build, Upload & Submit
+### 3. Fastlane API Key
+
+Fastlane uses a separate JSON file with the private key embedded. Create `~/private_keys/api_key.json`:
+
+```json
+{
+  "key_id": "YOUR_KEY_ID",
+  "issuer_id": "YOUR_ISSUER_ID",
+  "key": "-----BEGIN PRIVATE KEY-----\nYOUR_P8_KEY_CONTENT_HERE\n-----END PRIVATE KEY-----",
+  "in_house": false
+}
+```
+
+To get the `key` value, copy the contents of your `.p8` file and replace newlines with `\n`.
+
+Usage:
+
+```bash
+# Upload metadata and screenshots
+fastlane deliver --api_key_path ~/private_keys/api_key.json
+
+# Upload screenshots only
+fastlane deliver --api_key_path ~/private_keys/api_key.json --skip_binary_upload --skip_metadata
+
+# Upload metadata only
+fastlane deliver --api_key_path ~/private_keys/api_key.json --skip_binary_upload --skip_screenshots
+```
+
+### 4. Build, Upload & Submit
 
 ```bash
 # Load env vars
