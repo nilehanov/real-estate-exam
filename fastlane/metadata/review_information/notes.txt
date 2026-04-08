@@ -1,0 +1,1 @@
+This app is a self-contained study tool for real estate exam preparation. All 1,300 questions are embedded within the app — no login, account, or internet connection is required. Simply launch the app, select a category, and begin practicing.

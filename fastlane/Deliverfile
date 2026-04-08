@@ -1,0 +1,14 @@
+app_identifier "com.nilehanov.realestateexam"
+username "nile.hanov@gmail.com"
+team_id "KWQTH8W4TL"
+
+# Metadata
+force true
+skip_binary_upload true
+overwrite_screenshots true
+submit_for_review false
+automatic_release false
+precheck_include_in_app_purchases false
+
+# Screenshots
+skip_screenshots false

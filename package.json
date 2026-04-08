@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Real Estate Exam Practice App",
   "scripts": {
-    "build": "cp index.html www/index.html",
+    "build": "cp index.html www/index.html && mkdir -p www/fonts && cp fonts/*.woff2 www/fonts/",
     "cap:sync": "npx cap sync",
     "cap:open": "npx cap open ios"
   },

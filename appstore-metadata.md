@@ -1,7 +1,7 @@
 # App Store Connect Metadata
 
 ## App Name
-Real Estate Exam
+Real Estate Exam Preps
 
 ## Subtitle (30 chars max)
 CA DRE Salesperson Prep
@@ -28,7 +28,7 @@ Prepare on your own schedule. Study anywhere, anytime — all content is availab
 1,300 practice questions for the California Real Estate Salesperson Exam. Study offline with instant feedback and detailed explanations.
 
 ## Keywords (100 chars max, comma-separated)
-real estate exam,california,DRE,salesperson,practice test,study,license,prep,quiz,realtor
+real estate exam,california,DRE,salesperson,practice test,study,license,prep,quiz,agent
 
 ## Category
 Primary: Education

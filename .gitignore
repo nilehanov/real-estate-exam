@@ -7,3 +7,4 @@ ios/App/App.xcodeproj/xcuserdata/
 ios/DerivedData/
 build/
 screenshots/
+fastlane/api_key.json
