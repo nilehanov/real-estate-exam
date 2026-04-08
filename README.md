@@ -163,12 +163,19 @@ Fastlane uses a separate JSON file with the private key embedded. Create `~/priv
 
 ```json
 {
-  "key_id": "YOUR_KEY_ID",
-  "issuer_id": "YOUR_ISSUER_ID",
-  "key": "-----BEGIN PRIVATE KEY-----\nYOUR_P8_KEY_CONTENT_HERE\n-----END PRIVATE KEY-----",
+  "key_id": "AB12CD34EF",
+  "issuer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "key": "-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqG...your-key-content...kE9Yz0=\n-----END PRIVATE KEY-----",
   "in_house": false
 }
 ```
+
+| Field | Where to find it | Format |
+|-------|-----------------|--------|
+| `key_id` | App Store Connect > Users and Access > Integrations > App Store Connect API > Key ID column | 10-char alphanumeric (e.g. `AB12CD34EF`) |
+| `issuer_id` | Same page, shown at the top above the keys table | UUID (e.g. `a1b2c3d4-e5f6-7890-abcd-ef1234567890`) |
+| `key` | Contents of the `.p8` file you downloaded when creating the key (newlines replaced with `\n`) | PEM-encoded EC private key |
+| `in_house` | Set to `false` for standard Apple Developer accounts, `true` only for Apple Enterprise accounts | `false` for most developers |
 
 To get the `key` value, copy the contents of your `.p8` file and replace newlines with `\n`.
 
