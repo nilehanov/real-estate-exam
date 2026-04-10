@@ -84,10 +84,14 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin, SubscriptionStatusDele
     }
 
     @objc func getSubscriptionStatus(_ call: CAPPluginCall) {
+        #if DEBUG
+        call.resolve(["isActive": true, "isTrialPeriod": false, "willAutoRenew": false])
+        #else
         Task {
             let status = await manager.checkSubscriptionStatus()
             call.resolve(status.toDictionary())
         }
+        #endif
     }
 
     @objc func isDebugBuild(_ call: CAPPluginCall) {
@@ -101,7 +105,13 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin, SubscriptionStatusDele
     // MARK: - SubscriptionStatusDelegate
 
     nonisolated func subscriptionStatusDidChange(_ status: SubscriptionStatus) {
+        #if DEBUG
+        notifyListeners("subscriptionStatusChanged", data: [
+            "isActive": true, "isTrialPeriod": false, "willAutoRenew": false
+        ])
+        #else
         notifyListeners("subscriptionStatusChanged", data: status.toDictionary())
+        #endif
     }
 }
 

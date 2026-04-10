@@ -4,6 +4,7 @@
   "description": "Real Estate Exam Practice App",
   "scripts": {
     "build": "cp index.html www/index.html && mkdir -p www/fonts && cp fonts/*.woff2 www/fonts/",
+    "build:ios": "npm run build && npx cap copy ios",
     "cap:sync": "npx cap sync",
     "cap:open": "npx cap open ios"
   },

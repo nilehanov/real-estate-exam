@@ -5,4 +5,5 @@ CAP_PLUGIN(StoreKitPlugin, "StoreKit",
     CAP_PLUGIN_METHOD(purchase, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(restorePurchases, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(getSubscriptionStatus, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(isDebugBuild, CAPPluginReturnPromise);
 )

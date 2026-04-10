@@ -540,19 +540,22 @@ body{
   var csState = { filter: null, search: "", current: 0, answers: {} };
 
   // --- Subscription ---
-  var isPremium = false;
+  var isPremium = window.__PAYWALL_DISABLED__ || false;
   var isNative = typeof Capacitor !== "undefined" && Capacitor.isNativePlatform();
   var StoreKit = null;
   try { if (isNative) StoreKit = Capacitor.registerPlugin("StoreKit"); } catch(e) { console.warn("StoreKit registration failed:", e); }
 
   function checkSubscription() {
     if (!isNative) { isPremium = true; updateLockIcon(); return; }
-    // Unlock all features for local/debug builds (Xcode), keep paywall for App Store
+    // Build-time flag set by Xcode Debug build phase — skip all StoreKit calls
+    if (isPremium) { updateLockIcon(); renderQuestion(); renderCats(); return; }
+    // Release builds: check subscription via StoreKit
     try {
-      if (StoreKit && typeof StoreKit.isDebugBuild === "function") {
-        StoreKit.isDebugBuild().then(function(r) {
-          if (r.isDebug) { isPremium = true; updateLockIcon(); renderQuestion(); renderCats(); return; }
-          loadSubscriptionStatus();
+      if (StoreKit) {
+        StoreKit.getSubscriptionStatus().then(function(s) {
+          isPremium = s.isActive;
+          try { localStorage.setItem("subscription_status", JSON.stringify(s)); } catch(e) {}
+          updateLockIcon(); renderQuestion(); renderCats();
         }).catch(function() { loadSubscriptionStatus(); });
         return;
       }
@@ -567,7 +570,7 @@ body{
     } catch(e) {}
     updateLockIcon();
     try {
-      if (StoreKit && typeof StoreKit.getSubscriptionStatus === "function") {
+      if (StoreKit) {
         StoreKit.getSubscriptionStatus().then(function(s) {
           isPremium = s.isActive;
           try { localStorage.setItem("subscription_status", JSON.stringify(s)); } catch(e) {}
@@ -660,7 +663,7 @@ body{
   }
 
   try {
-    if (isNative && StoreKit && typeof StoreKit.addListener === "function") {
+    if (isNative && StoreKit) {
       StoreKit.addListener("subscriptionStatusChanged", function(s) {
         isPremium = s.isActive;
         try { localStorage.setItem("subscription_status", JSON.stringify(s)); } catch(e) {}
