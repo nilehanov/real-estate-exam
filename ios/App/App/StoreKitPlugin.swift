@@ -10,6 +10,7 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin, SubscriptionStatusDele
         CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restorePurchases", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getSubscriptionStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isDebugBuild", returnType: CAPPluginReturnPromise),
     ]
 
     private let manager = SubscriptionManager()
@@ -87,6 +88,14 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin, SubscriptionStatusDele
             let status = await manager.checkSubscriptionStatus()
             call.resolve(status.toDictionary())
         }
+    }
+
+    @objc func isDebugBuild(_ call: CAPPluginCall) {
+        #if DEBUG
+        call.resolve(["isDebug": true])
+        #else
+        call.resolve(["isDebug": false])
+        #endif
     }
 
     // MARK: - SubscriptionStatusDelegate

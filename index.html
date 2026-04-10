@@ -542,20 +542,39 @@ body{
   // --- Subscription ---
   var isPremium = false;
   var isNative = typeof Capacitor !== "undefined" && Capacitor.isNativePlatform();
-  var StoreKit = isNative ? Capacitor.registerPlugin("StoreKit") : null;
+  var StoreKit = null;
+  try { if (isNative) StoreKit = Capacitor.registerPlugin("StoreKit"); } catch(e) { console.warn("StoreKit registration failed:", e); }
 
   function checkSubscription() {
     if (!isNative) { isPremium = true; updateLockIcon(); return; }
+    // Unlock all features for local/debug builds (Xcode), keep paywall for App Store
+    try {
+      if (StoreKit && typeof StoreKit.isDebugBuild === "function") {
+        StoreKit.isDebugBuild().then(function(r) {
+          if (r.isDebug) { isPremium = true; updateLockIcon(); renderQuestion(); renderCats(); return; }
+          loadSubscriptionStatus();
+        }).catch(function() { loadSubscriptionStatus(); });
+        return;
+      }
+    } catch(e) {}
+    loadSubscriptionStatus();
+  }
+
+  function loadSubscriptionStatus() {
     try {
       var cached = localStorage.getItem("subscription_status");
       if (cached) { isPremium = JSON.parse(cached).isActive; }
     } catch(e) {}
     updateLockIcon();
-    StoreKit.getSubscriptionStatus().then(function(s) {
-      isPremium = s.isActive;
-      localStorage.setItem("subscription_status", JSON.stringify(s));
-      updateLockIcon(); renderQuestion(); renderCats();
-    }).catch(function() {});
+    try {
+      if (StoreKit && typeof StoreKit.getSubscriptionStatus === "function") {
+        StoreKit.getSubscriptionStatus().then(function(s) {
+          isPremium = s.isActive;
+          try { localStorage.setItem("subscription_status", JSON.stringify(s)); } catch(e) {}
+          updateLockIcon(); renderQuestion(); renderCats();
+        }).catch(function(e) { console.warn("StoreKit status check failed:", e); });
+      }
+    } catch(e) { console.warn("StoreKit plugin error:", e); }
   }
 
   function updateLockIcon() {
@@ -640,13 +659,15 @@ body{
     });
   }
 
-  if (isNative && StoreKit) {
-    StoreKit.addListener("subscriptionStatusChanged", function(s) {
-      isPremium = s.isActive;
-      localStorage.setItem("subscription_status", JSON.stringify(s));
-      updateLockIcon(); renderQuestion(); renderCats();
-    });
-  }
+  try {
+    if (isNative && StoreKit && typeof StoreKit.addListener === "function") {
+      StoreKit.addListener("subscriptionStatusChanged", function(s) {
+        isPremium = s.isActive;
+        try { localStorage.setItem("subscription_status", JSON.stringify(s)); } catch(e) {}
+        updateLockIcon(); renderQuestion(); renderCats();
+      });
+    }
+  } catch(e) { console.warn("StoreKit listener error:", e); }
   // --- End Subscription ---
   function getState(){ return mode === "mc" ? mcState : csState; }
   function getData(){ return mode === "mc" ? Q : CS; }
@@ -812,7 +833,7 @@ body{
         h += '<div class="explanation-box"><strong>' + (ans.correct ? '&#10003; Correct!' : '&#10007; Incorrect') + '</strong><br>' + esc(q.explanation) + '</div>';
       } else {
         h += '<div class="explanation-box"><strong>' + (ans.correct ? '&#10003; Correct!' : '&#10007; Incorrect') + '</strong>'
-          + '<div class="explanation-locked">Unlock detailed explanations with Premium<br><button class="unlock-btn" onclick="showPaywall()">Unlock Premium</button></div></div>';
+          + '<div class="explanation-locked">Unlock detailed explanations with Premium<br><button class="unlock-btn" data-action="showPaywall">Unlock Premium</button></div></div>';
       }
     }
     h += '</div>';
@@ -947,6 +968,8 @@ body{
       }
       return;
     }
+    var unlockBtn = e.target.closest("[data-action='showPaywall']");
+    if (unlockBtn) { showPaywall(); return; }
     var navBtn = e.target.closest(".nav-btn:not(:disabled)");
     if (navBtn) {
       var action = navBtn.getAttribute("data-nav");
