@@ -197,6 +197,12 @@ body{
 .stat{font-size:.73rem;color:var(--text3);letter-spacing:.03em}
 .stat strong{color:var(--gold);font-weight:500}
 .stat-divider{color:var(--border);font-size:.6rem;align-self:center}
+.timer{display:flex;align-items:center;gap:.4rem;font-size:.73rem;color:var(--text3);letter-spacing:.03em}
+.timer-time{color:var(--gold);font-weight:500;cursor:pointer;font-variant-numeric:tabular-nums;transition:opacity .2s}
+.timer-time:hover{color:var(--gold-light)}
+.timer.paused .timer-time{opacity:.45}
+.timer-reset{color:var(--text3);font-size:.6rem;cursor:pointer;opacity:.4;transition:all .2s;letter-spacing:.03em}
+.timer-reset:hover{opacity:1;color:var(--gold)}
 
 /* Layout */
 .app{display:flex;min-height:calc(100vh - 110px)}
@@ -428,6 +434,8 @@ body{
   .header .subtitle{font-size:.55rem;letter-spacing:.14em}
   .stats-bar{gap:.8rem;margin-top:.4rem}
   .stat{font-size:.65rem}
+  .timer{font-size:.65rem}
+  .timer-reset{font-size:.55rem}
   .sidebar{
     position:fixed;left:-300px;top:0;height:100vh;z-index:150;
     transition:left .3s cubic-bezier(.4,0,.2,1);padding-top:1rem;box-shadow:var(--shadow3);
@@ -510,6 +518,11 @@ body{
     <div class="stat"><strong id="s-correct">0</strong> correct</div>
     <span class="stat-divider">&bull;</span>
     <div class="stat"><strong id="s-pct">0%</strong> accuracy</div>
+    <span class="stat-divider">&bull;</span>
+    <div class="timer" id="timer">
+      <span class="timer-time" id="timerDisplay" title="Click to pause/resume">00:00</span>
+      <span class="timer-reset" id="timerReset" title="Reset timer">reset</span>
+    </div>
   </div>
 </div>
 <div class="app">
@@ -672,6 +685,99 @@ body{
     }
   } catch(e) { console.warn("StoreKit listener error:", e); }
   // --- End Subscription ---
+
+  // --- Study Timer ---
+  var timerAccumulated = 0;
+  var timerSessionStart = 0;
+  var timerInterval = null;
+  var timerRunning = false;
+
+  function initTimer() {
+    try {
+      var saved = localStorage.getItem("study_timer_accumulated");
+      if (saved) timerAccumulated = parseInt(saved, 10) || 0;
+    } catch(e) {}
+    timerSessionStart = Date.now();
+    timerRunning = true;
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+    updateTimerDisplay();
+
+    document.getElementById("timerDisplay").addEventListener("click", toggleTimer);
+    document.getElementById("timerReset").addEventListener("click", resetTimer);
+
+    document.addEventListener("visibilitychange", function() {
+      if (document.hidden) {
+        if (timerRunning) {
+          timerAccumulated += Date.now() - timerSessionStart;
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      } else {
+        if (timerRunning) {
+          timerSessionStart = Date.now();
+          timerInterval = setInterval(updateTimerDisplay, 1000);
+          updateTimerDisplay();
+        }
+      }
+      persistTimer();
+    });
+  }
+
+  function updateTimerDisplay() {
+    var elapsed = timerAccumulated;
+    if (timerRunning) elapsed += Date.now() - timerSessionStart;
+    var totalSec = Math.floor(elapsed / 1000);
+    document.getElementById("timerDisplay").textContent = formatTime(totalSec);
+    persistTimer();
+  }
+
+  function formatTime(s) {
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    var mm = (m < 10 ? "0" : "") + m;
+    var ss = (sec < 10 ? "0" : "") + sec;
+    return h > 0 ? h + ":" + mm + ":" + ss : mm + ":" + ss;
+  }
+
+  function toggleTimer() {
+    if (timerRunning) {
+      timerAccumulated += Date.now() - timerSessionStart;
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerRunning = false;
+      document.getElementById("timer").classList.add("paused");
+    } else {
+      timerSessionStart = Date.now();
+      timerRunning = true;
+      timerInterval = setInterval(updateTimerDisplay, 1000);
+      document.getElementById("timer").classList.remove("paused");
+      updateTimerDisplay();
+    }
+    persistTimer();
+  }
+
+  function resetTimer() {
+    timerAccumulated = 0;
+    timerSessionStart = Date.now();
+    if (!timerRunning) {
+      timerRunning = true;
+      timerInterval = setInterval(updateTimerDisplay, 1000);
+      document.getElementById("timer").classList.remove("paused");
+    }
+    updateTimerDisplay();
+    persistTimer();
+  }
+
+  function persistTimer() {
+    try {
+      var elapsed = timerAccumulated;
+      if (timerRunning) elapsed += Date.now() - timerSessionStart;
+      localStorage.setItem("study_timer_accumulated", String(elapsed));
+    } catch(e) {}
+  }
+  // --- End Study Timer ---
+
   function getState(){ return mode === "mc" ? mcState : csState; }
   function getData(){ return mode === "mc" ? Q : CS; }
 
@@ -1000,6 +1106,7 @@ body{
 
   // Init
   checkSubscription();
+  initTimer();
   updateStats(); renderCats(); renderGrid(); renderQuestion();
 })();
 </script>
