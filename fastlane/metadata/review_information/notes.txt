@@ -1,1 +1,9 @@
-This app is a self-contained study tool for real estate exam preparation. All 1,300 questions are embedded within the app — no login, account, or internet connection is required. Simply launch the app, select a category, and begin practicing.
+This app uses a freemium model. All 1,000 multiple choice questions are available for free. Case study scenarios (100 scenarios x 3 questions each = 300 questions) and detailed explanations for multiple choice questions require a Premium subscription ($0.99/month with a 1-week free trial).
+
+How to test the purchase flow:
+1. Launch the app and select any category.
+2. Tap a case study question (marked with a lock icon), or tap "Unlock Premium" in the category list.
+3. A paywall modal appears with a "Try Free for 1 Week" button and a "Restore Purchases" button.
+4. Tap "Try Free for 1 Week" to initiate the StoreKit purchase flow.
+
+No login or account is required. All question content is embedded locally — no internet connection is needed except for the StoreKit purchase transaction.
