@@ -674,11 +674,11 @@ body{
           alert("Purchase is pending approval.");
         } else {
           btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
-          alert("Unable to complete purchase. Please check your connection and try again.");
+          alert(r.error || "Unable to complete purchase. Please try again later.");
         }
       }).catch(function(e) {
         btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
-        alert("Purchase failed. Please try again.");
+        alert("Purchase failed: " + (e.message || "Please try again later."));
       });
   }
 
@@ -698,9 +698,9 @@ body{
         btn.textContent = "Restore Purchases";
         alert("No active subscription found.");
       }
-    }).catch(function() {
+    }).catch(function(e) {
       btn.textContent = "Restore Purchases";
-      alert("Restore failed. Please try again.");
+      alert("Restore failed: " + (e.message || "Please try again later."));
     });
   }
 

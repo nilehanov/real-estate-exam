@@ -656,6 +656,10 @@ body{
 
   function handlePurchase() {
     var btn = document.getElementById("pwBuy");
+    if (!StoreKit) {
+      alert("In-app purchases are not available. Please restart the app and try again.");
+      return;
+    }
     btn.textContent = "Processing..."; btn.disabled = true;
     StoreKit.purchase({ productId: "com.nilehanov.realestateexam.premium.monthly" })
       .then(function(r) {
@@ -665,18 +669,25 @@ body{
           hidePaywall(); updateLockIcon(); renderQuestion(); renderCats();
         } else if (r.status === "cancelled") {
           btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
+        } else if (r.status === "pending") {
+          btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
+          alert("Purchase is pending approval.");
         } else {
           btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
-          if (r.status === "pending") alert("Purchase is pending approval.");
+          alert(r.error || "Unable to complete purchase. Please try again later.");
         }
       }).catch(function(e) {
         btn.textContent = "Try Free for 1 Week"; btn.disabled = false;
-        alert("Purchase failed. Please try again.");
+        alert("Purchase failed: " + (e.message || "Please try again later."));
       });
   }
 
   function handleRestore() {
     var btn = document.getElementById("pwRestore");
+    if (!StoreKit) {
+      alert("In-app purchases are not available. Please restart the app and try again.");
+      return;
+    }
     btn.textContent = "Restoring...";
     StoreKit.restorePurchases().then(function(s) {
       isPremium = s.isActive;
@@ -687,9 +698,9 @@ body{
         btn.textContent = "Restore Purchases";
         alert("No active subscription found.");
       }
-    }).catch(function() {
+    }).catch(function(e) {
       btn.textContent = "Restore Purchases";
-      alert("Restore failed. Please try again.");
+      alert("Restore failed: " + (e.message || "Please try again later."));
     });
   }
 

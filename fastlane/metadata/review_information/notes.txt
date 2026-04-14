@@ -1,9 +1,14 @@
 This app uses a freemium model. All 1,000 multiple choice questions are available for free. Case study scenarios (100 scenarios x 3 questions each = 300 questions) and detailed explanations for multiple choice questions require a Premium subscription ($0.99/month with a 1-week free trial).
 
+The In-App Purchase subscription (com.nilehanov.realestateexam.premium.monthly) has been submitted for review alongside this binary. The Paid Apps Agreement is active.
+
+Terms of Use and Privacy Policy links are included in both the App Store description and within the app's paywall modal.
+
 How to test the purchase flow:
 1. Launch the app and select any category.
 2. Tap a case study question (marked with a lock icon), or tap "Unlock Premium" in the category list.
 3. A paywall modal appears with a "Try Free for 1 Week" button and a "Restore Purchases" button.
 4. Tap "Try Free for 1 Week" to initiate the StoreKit purchase flow.
+5. The paywall also shows subscription terms, Privacy Policy, and Terms of Use links at the bottom.
 
 No login or account is required. All question content is embedded locally — no internet connection is needed except for the StoreKit purchase transaction.
