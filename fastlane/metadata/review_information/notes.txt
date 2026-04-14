@@ -2,13 +2,16 @@ This app uses a freemium model. All 1,000 multiple choice questions are availabl
 
 The In-App Purchase subscription (com.nilehanov.realestateexam.premium.monthly) has been submitted for review alongside this binary. The Paid Apps Agreement is active.
 
-Terms of Use and Privacy Policy links are included in both the App Store description and within the app's paywall modal.
+All payment is handled exclusively through Apple's In-App Purchase (StoreKit 2). There are no external payment mechanisms, links to external websites, or alternative ways to access premium content within the app. Privacy Policy and Terms of Use are displayed inline within the app — they do not link to any external URLs.
+
+The subscription price shown in the paywall is fetched dynamically from StoreKit (not hardcoded), confirming proper IAP integration.
 
 How to test the purchase flow:
 1. Launch the app and select any category.
-2. Tap a case study question (marked with a lock icon), or tap "Unlock Premium" in the category list.
-3. A paywall modal appears with a "Try Free for 1 Week" button and a "Restore Purchases" button.
+2. Tap the "Case Studies" tab (marked with a lock icon) to trigger the paywall.
+3. A paywall modal appears — the "Try Free for 1 Week" button loads after StoreKit fetches product info.
 4. Tap "Try Free for 1 Week" to initiate the StoreKit purchase flow.
-5. The paywall also shows subscription terms, Privacy Policy, and Terms of Use links at the bottom.
+5. Tap "Privacy Policy" or "Terms of Use" — these open as in-app modals (not external links).
+6. The "Restore Purchases" button calls AppStore.sync() to restore prior subscriptions.
 
 No login or account is required. All question content is embedded locally — no internet connection is needed except for the StoreKit purchase transaction.
